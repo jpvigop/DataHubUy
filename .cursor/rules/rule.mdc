@@ -1,0 +1,128 @@
+---
+description: Documenation
+globs: 
+---
+1. Introduction
+This documentation outlines the design, setup, and usage of the AI-Assisted Open Data Dashboard—a scalable web application that fetches, processes, and visualizes government open data using AI-assisted coding tools. It serves as a guide for developers, designers, and project stakeholders.
+
+2. Project Overview
+Purpose: Provide a dynamic and interactive dashboard for exploring structured open data from government APIs.
+Vision: Combine AI-assisted coding with robust data processing to create an intuitive user interface that caters both to data experts and casual users.
+Key Objectives:
+Streamlined data ingestion and processing.
+Interactive, responsive dashboards.
+Scalability and modular design for future expansion.
+3. System Architecture
+Frontend: A React-based UI that offers search, filtering, and visualization.
+Backend: A FastAPI (or Flask) service responsible for data ingestion, processing, and serving data through RESTful endpoints.
+Database: A relational database (e.g., PostgreSQL or SQLite) for persistent storage. Optionally, Redis for caching frequently accessed queries.
+AI-Assisted Tools: Cursor AI to generate boilerplate code and assist in rapid prototyping.
+4. Technology Stack
+Backend
+Language: Python
+Framework: FastAPI (or Flask as an alternative for simplicity)
+Libraries:
+pandas for data manipulation
+requests for API calls
+uvicorn for asynchronous server management
+Key Components:
+Data ingestion module
+Data processing and validation routines
+RESTful API endpoints for data access
+Frontend
+Language: JavaScript (ES6+)
+Framework: React
+Libraries:
+UI Components: Tailwind CSS or Material UI
+Data Display: React Table for structured data views
+Visualizations: Chart.js or Recharts
+Data Fetching: Axios or Fetch API for REST calls
+Database & Caching
+Database Options: SQLite for initial development or PostgreSQL for production
+Caching: Consider Redis for query optimization and performance enhancement
+5. Core Features
+Data Processing & API
+Fetching structured data (CSV/JSON) from government APIs
+Data validation, preprocessing, and error handling
+RESTful endpoints for accessing processed data
+Interactive Dashboard UI
+Searchable and sortable data tables
+Advanced filters and keyword search
+Dynamic charts and graphs for data visualization
+Responsive design for mobile and desktop experiences
+AI-Assisted Coding
+Integration with Cursor AI for generating code templates and accelerating development
+6. Installation and Setup
+Prerequisites
+Backend: Python 3.8+, pip
+Frontend: Node.js 14+, npm or yarn
+Database: PostgreSQL or SQLite (depending on environment)
+Others: Docker (optional for containerization)
+Backend Setup
+Clone the repository.
+Create a virtual environment:
+bash
+Copy
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+Install dependencies:
+bash
+Copy
+pip install -r requirements.txt
+Set up environment variables (e.g., API keys, database URL).
+Run the FastAPI server:
+bash
+Copy
+uvicorn app.main:app --reload
+Frontend Setup
+Navigate to the frontend directory.
+Install dependencies:
+bash
+Copy
+npm install
+Start the development server:
+bash
+Copy
+npm start
+7. Usage Instructions
+Data Ingestion and Processing
+Fetch Data: Use the backend module to call government API endpoints.
+Process Data: Leverage pandas to clean, validate, and structure the data.
+Store Data: Save processed data to the database for efficient querying.
+API Endpoints
+GET /data: Retrieve a list of processed data records.
+GET /data/{id}: Fetch details for a specific data point.
+POST /data/import: Endpoint for triggering manual data ingestion (secured for admin use).
+Detailed API documentation is available via the integrated Swagger UI provided by FastAPI.
+Dashboard Interaction
+Homepage Options:
+Template Dashboard: Users can import and manipulate data similarly to Power BI.
+Categorical Index: Browse data by category and click through to view dedicated dashboards.
+User Experience: The UI supports advanced filtering, sorting, and real-time updates as new data is ingested.
+8. Development Workflow
+Project Phases
+Planning & Research: Define data sources, API structure, and UX design.
+MVP Development: Generate boilerplate code with Cursor AI, implement basic API calls, and build a functional dashboard.
+Optimization & Deployment: Enhance backend performance, improve UI/UX, and deploy on a cloud platform.
+Contribution Guidelines
+Code Style: Follow PEP 8 for Python and established JavaScript style guides.
+Branching Strategy: Use feature branches for development. Merge through pull requests after code reviews.
+Documentation: Update the documentation alongside new features or changes.
+9. Testing and Quality Assurance
+Unit Testing: Use frameworks such as PyTest (backend) and Jest (frontend).
+Integration Testing: Ensure that API endpoints correctly serve data to the frontend.
+Continuous Integration: Integrate automated testing in the CI/CD pipeline.
+Performance Testing: Monitor data ingestion and UI responsiveness under load.
+10. Deployment
+Local Environment
+Use Docker for local containerization to simulate production.
+Ensure environment variables and dependencies are correctly set up.
+Cloud Deployment
+Backend: Deploy FastAPI on AWS Lambda, DigitalOcean, or a VPS.
+Frontend: Host on Vercel, Netlify, or any static file server.
+CI/CD: Implement pipelines (e.g., GitHub Actions) for automated testing and deployment.
+11. Future Enhancements
+User Authentication: Personalize dashboards and secure data ingestion endpoints.
+Data Caching: Integrate Redis to optimize query performance.
+Multi-Source Integration: Expand to include additional government and public data sources.
+AI Chatbot: Develop an AI assistant to guide users through the data exploration process.
