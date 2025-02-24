@@ -106,7 +106,6 @@ export default function Home() {
             currentPage={currentPage}
             totalItems={total}
             itemsPerPage={ITEMS_PER_PAGE}
-            searchQuery=""
           />
         </>
       )}
