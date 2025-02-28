@@ -3,7 +3,7 @@ import './globals.css'
 import { ThemeToggle } from '@/components/ThemeToggle'
 
 export const metadata: Metadata = {
-  title: 'UruData - Explorador de Datos Abiertos',
+  title: 'DataHubUy - Explorador de Datos Abiertos',
   description: 'Explorador de datos abiertos de Uruguay',
 }
 
@@ -19,7 +19,7 @@ export default function RootLayout({
           <header className="w-full border-b bg-white dark:bg-gray-800 transition-colors">
             <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
               <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
-                UruData
+                DataHubUy
               </h1>
               <ThemeToggle />
             </div>

@@ -1,6 +1,6 @@
-# UruData - Explorador de Datos Abiertos
+# DataHubUy - Explorador de Datos Abiertos
 
-UruData es una aplicación web que permite explorar y visualizar datos del Catálogo Nacional de Datos Abiertos de Uruguay.
+DataHubUy es una aplicación web que permite explorar y visualizar datos del Catálogo Nacional de Datos Abiertos de Uruguay.
 
 ## Características
 
@@ -31,8 +31,8 @@ UruData es una aplicación web que permite explorar y visualizar datos del Catá
 
 ```bash
 # Clonar el repositorio
-git clone https://github.com/tu-usuario/urudata.git
-cd urudata
+git clone https://github.com/tu-usuario/datahubuy.git
+cd datahubuy
 
 # Instalar dependencias
 npm install
