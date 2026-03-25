@@ -1,37 +1,50 @@
 'use client';
 
+import { FormEvent, useEffect, useState, useTransition } from 'react';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useState } from 'react';
 
-export function SearchInput() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [value, setValue] = useState(searchParams.get('q') || '');
+interface SearchInputProps {
+  initialQuery: string;
+  onSearch: (value: string) => void;
+}
 
-  const handleSearch = useCallback((term: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (term) {
-      params.set('q', term);
-    } else {
-      params.delete('q');
-    }
-    router.push(`/?${params.toString()}`);
-  }, [router, searchParams]);
+export function SearchInput({ initialQuery, onSearch }: SearchInputProps) {
+  const [value, setValue] = useState(initialQuery);
+  const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setValue(initialQuery);
+  }, [initialQuery]);
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    startTransition(() => {
+      onSearch(value.trim());
+    });
+  };
 
   return (
-    <div className="relative">
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => {
-          setValue(e.target.value);
-          handleSearch(e.target.value);
-        }}
-        placeholder="Buscar datasets..."
-        className="w-full p-4 pl-12 text-lg border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-      />
-      <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-    </div>
+    <form className="flex flex-col gap-3 sm:flex-row" onSubmit={handleSubmit}>
+      <label className="relative block flex-1">
+        <span className="sr-only">Buscar datasets</span>
+        <MagnifyingGlassIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+        <input
+          className="w-full rounded-xl border border-slate-200 bg-white px-12 py-3 text-base text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+          onChange={(event) => setValue(event.target.value)}
+          placeholder="Buscar por nombre o descripcion"
+          type="search"
+          value={value}
+        />
+      </label>
+
+      <button
+        className="inline-flex items-center justify-center rounded-xl bg-primary px-5 py-3 font-medium text-white transition hover:bg-sky-600 disabled:cursor-wait disabled:opacity-80"
+        disabled={isPending}
+        type="submit"
+      >
+        {isPending ? 'Buscando...' : 'Buscar'}
+      </button>
+    </form>
   );
-} 
+}

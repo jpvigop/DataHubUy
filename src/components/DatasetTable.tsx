@@ -1,358 +1,200 @@
 'use client';
 
-import { useState, useCallback, useMemo, memo } from 'react';
-import { Dataset } from '@/lib/api';
-import { 
-  ChevronUpIcon, 
-  ChevronDownIcon, 
-  XMarkIcon,
-  MagnifyingGlassIcon,
-  DocumentIcon,
-  CalendarIcon,
-  ArrowDownTrayIcon,
-  TableCellsIcon,
-  StarIcon
+import {
+  ArrowTopRightOnSquareIcon,
+  BookmarkIcon,
 } from '@heroicons/react/24/outline';
-import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
-import { ResourceList } from './ResourceList';
-import clsx from 'clsx';
-import { useFavorites } from '@/lib/hooks/useFavorites';
+import { BookmarkIcon as BookmarkSolidIcon } from '@heroicons/react/24/solid';
+
+import type {
+  CatalogQueryState,
+  CatalogSortField,
+} from '@/lib/catalog-query';
+import type { Dataset } from '@/lib/types';
 
 interface DatasetTableProps {
   datasets: Dataset[];
-  onSortAction: (field: string) => void;
-  sortField?: string;
-  sortDirection?: 'asc' | 'desc';
+  onOpenDataset: (datasetId: string) => void;
+  onSort: (field: CatalogSortField) => void;
+  onToggleSaved: (dataset: Dataset) => void;
+  query: CatalogQueryState;
+  savedDatasetIds: Set<string>;
 }
 
-// Memoized table row component
-const DatasetRow = memo(({ 
-  dataset, 
-  isSelected, 
-  isFavorite,
-  onSelect, 
-  onToggleFavorite 
-}: { 
-  dataset: Dataset;
-  isSelected: boolean;
-  isFavorite: boolean;
-  onSelect: (dataset: Dataset) => void;
-  onToggleFavorite: (dataset: Dataset) => void;
-}) => (
-  <tr
-    onClick={() => onSelect(dataset)}
-    className={clsx(
-      'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50',
-      isSelected && 'bg-primary/5 dark:bg-primary/10'
-    )}
-  >
-    <td className="px-4 py-3 text-sm border-b dark:border-gray-700">
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggleFavorite(dataset);
-        }}
-        className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-      >
-        {isFavorite ? (
-          <StarIconSolid className="w-5 h-5 text-primary" />
-        ) : (
-          <StarIcon className="w-5 h-5 text-gray-400 dark:text-gray-500" />
-        )}
-      </button>
-    </td>
-    <td className="px-4 py-3 text-sm border-b dark:border-gray-700">
-      <h3 className="font-medium text-gray-900 dark:text-white line-clamp-2">
-        {dataset.title}
-      </h3>
-      <p className="text-gray-500 dark:text-gray-400 text-sm line-clamp-1 mt-1">
-        {dataset.description}
-      </p>
-    </td>
-    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 border-b dark:border-gray-700">
-      {dataset.organization.title}
-    </td>
-    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 border-b dark:border-gray-700 whitespace-nowrap">
-      {new Date(dataset.metadata_created).toLocaleDateString('es')}
-    </td>
-    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 border-b dark:border-gray-700">
-      <div className="flex items-center gap-1">
-        <DocumentIcon className="w-4 h-4" />
-        <span>{dataset.resources.length}</span>
-      </div>
-    </td>
-  </tr>
-));
-
-DatasetRow.displayName = 'DatasetRow';
-
-// Memoized filter input component
-const FilterInput = memo(({ 
-  value, 
-  onChange, 
-  placeholder 
-}: { 
-  value: string; 
-  onChange: (value: string) => void;
-  placeholder: string;
-}) => (
-  <div className="mt-2 relative">
-    <input
-      type="text"
-      placeholder={placeholder}
-      className="w-full px-2 py-1 text-sm border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
-      value={value}
-      onChange={e => onChange(e.target.value)}
-    />
-    <MagnifyingGlassIcon className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
-  </div>
-));
-
-FilterInput.displayName = 'FilterInput';
-
-export function DatasetTable({ datasets, onSortAction, sortField, sortDirection }: DatasetTableProps) {
-  const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null);
-  const [filters, setFilters] = useState<Record<string, string>>({});
-  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
-  const { favorites, toggleFavorite, isFavorite } = useFavorites();
-
-  // Memoize filtered datasets
-  const filteredDatasets = useMemo(() => {
-    return datasets.filter(dataset => {
-      if (showOnlyFavorites && !isFavorite(dataset.id)) {
-        return false;
-      }
-
-      return Object.entries(filters).every(([field, value]) => {
-        if (!value) return true;
-        const fieldValue = field === 'organization' 
-          ? dataset.organization.title.toLowerCase()
-          : String(dataset[field as keyof Dataset]).toLowerCase();
-        return fieldValue.includes(value.toLowerCase());
-      });
-    });
-  }, [datasets, filters, showOnlyFavorites, isFavorite]);
-
-  const handleSort = useCallback((field: string) => {
-    onSortAction(field);
-  }, [onSortAction]);
-
-  const handleFilterChange = useCallback((field: string, value: string) => {
-    setFilters(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  }, []);
-
+function SortButton({
+  active,
+  children,
+  direction,
+  onClick,
+}: {
+  active: boolean;
+  children: React.ReactNode;
+  direction: CatalogQueryState['direction'];
+  onClick: () => void;
+}) {
   return (
-    <div className="relative">
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowOnlyFavorites(!showOnlyFavorites)}
-            className={clsx(
-              'flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors',
-              showOnlyFavorites
-                ? 'bg-primary text-white border-primary'
-                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700'
-            )}
-          >
-            {showOnlyFavorites ? (
-              <StarIconSolid className="w-5 h-5" />
-            ) : (
-              <StarIcon className="w-5 h-5" />
-            )}
-            {showOnlyFavorites ? 'Mostrando favoritos' : 'Mostrar favoritos'}
-            {showOnlyFavorites && (
-              <span className="ml-2 bg-white/20 px-2 py-0.5 rounded text-sm">
-                {favorites.length}
-              </span>
-            )}
-          </button>
-        </div>
-      </div>
+    <button
+      className="inline-flex items-center gap-2 hover:text-primary"
+      onClick={onClick}
+      type="button"
+    >
+      <span>{children}</span>
+      {active && <span className="text-xs uppercase">{direction}</span>}
+    </button>
+  );
+}
 
-      <div className="overflow-x-auto rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700">
-        <table className="w-full border-collapse">
-          <thead className="bg-gray-50 dark:bg-gray-700/50">
-            <tr>
-              <th className="w-10 px-4 py-2 text-left text-sm font-medium text-gray-900 dark:text-gray-200 border-b dark:border-gray-700">
-              </th>
-              <th className="px-4 py-2 text-left text-sm font-medium text-gray-900 dark:text-gray-200 border-b dark:border-gray-700 w-[45%]">
-                <div className="flex items-center gap-2">
+export function DatasetTable({
+  datasets,
+  onOpenDataset,
+  onSort,
+  onToggleSaved,
+  query,
+  savedDatasetIds,
+}: DatasetTableProps) {
+  return (
+    <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <table className="min-w-full border-collapse">
+        <thead className="bg-slate-50 text-left dark:bg-slate-800/80">
+          <tr>
+            <th className="px-4 py-3 text-sm font-medium text-slate-700 dark:text-slate-200">
+              Guardar
+            </th>
+            <th
+              aria-sort={
+                query.sort === 'title'
+                  ? query.direction === 'asc'
+                    ? 'ascending'
+                    : 'descending'
+                  : 'none'
+              }
+              className="px-4 py-3 text-sm font-medium text-slate-700 dark:text-slate-200"
+              scope="col"
+            >
+              <SortButton
+                active={query.sort === 'title'}
+                direction={query.direction}
+                onClick={() => onSort('title')}
+              >
+                Titulo
+              </SortButton>
+            </th>
+            <th className="px-4 py-3 text-sm font-medium text-slate-700 dark:text-slate-200">
+              Organizacion
+            </th>
+            <th
+              aria-sort={
+                query.sort === 'metadata_modified'
+                  ? query.direction === 'asc'
+                    ? 'ascending'
+                    : 'descending'
+                  : 'none'
+              }
+              className="px-4 py-3 text-sm font-medium text-slate-700 dark:text-slate-200"
+              scope="col"
+            >
+              <SortButton
+                active={query.sort === 'metadata_modified'}
+                direction={query.direction}
+                onClick={() => onSort('metadata_modified')}
+              >
+                Actualizado
+              </SortButton>
+            </th>
+            <th
+              aria-sort={
+                query.sort === 'num_resources'
+                  ? query.direction === 'asc'
+                    ? 'ascending'
+                    : 'descending'
+                  : 'none'
+              }
+              className="px-4 py-3 text-sm font-medium text-slate-700 dark:text-slate-200"
+              scope="col"
+            >
+              <SortButton
+                active={query.sort === 'num_resources'}
+                direction={query.direction}
+                onClick={() => onSort('num_resources')}
+              >
+                Recursos
+              </SortButton>
+            </th>
+            <th className="px-4 py-3 text-sm font-medium text-slate-700 dark:text-slate-200">
+              Acciones
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {datasets.map((dataset) => {
+            const isSelected = dataset.id === query.dataset;
+            const isSaved = savedDatasetIds.has(dataset.id);
+
+            return (
+              <tr
+                className={
+                  isSelected
+                    ? 'bg-primary/5 dark:bg-primary/10'
+                    : 'border-t border-slate-200 dark:border-slate-800'
+                }
+                key={dataset.id}
+              >
+                <td className="px-4 py-4 align-top">
                   <button
-                    className="flex items-center gap-1 hover:text-primary"
-                    onClick={() => handleSort('title')}
+                    aria-label={
+                      isSaved
+                        ? `Quitar ${dataset.title} de guardados`
+                        : `Guardar ${dataset.title}`
+                    }
+                    className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-primary dark:text-slate-400 dark:hover:bg-slate-800"
+                    onClick={() => onToggleSaved(dataset)}
+                    type="button"
                   >
-                    Título
-                    {sortField === 'title' && (
-                      sortDirection === 'asc' ? (
-                        <ChevronUpIcon className="w-4 h-4" />
-                      ) : (
-                        <ChevronDownIcon className="w-4 h-4" />
-                      )
+                    {isSaved ? (
+                      <BookmarkSolidIcon className="h-5 w-5 text-primary" />
+                    ) : (
+                      <BookmarkIcon className="h-5 w-5" />
                     )}
                   </button>
-                </div>
-                <div className="mt-2 relative">
-                  <FilterInput
-                    value={filters.title || ''}
-                    onChange={handleFilterChange.bind(null, 'title')}
-                    placeholder="Filtrar por título..."
-                  />
-                </div>
-              </th>
-              <th className="px-4 py-2 text-left text-sm font-medium text-gray-900 dark:text-gray-200 border-b dark:border-gray-700 w-[35%]">
-                <div className="flex items-center gap-2">
+                </td>
+                <td className="px-4 py-4 align-top">
                   <button
-                    className="flex items-center gap-1 hover:text-primary"
-                    onClick={() => handleSort('organization.title')}
+                    className="text-left"
+                    onClick={() => onOpenDataset(dataset.id)}
+                    type="button"
                   >
-                    Organización
-                    {sortField === 'organization.title' && (
-                      sortDirection === 'asc' ? (
-                        <ChevronUpIcon className="w-4 h-4" />
-                      ) : (
-                        <ChevronDownIcon className="w-4 h-4" />
-                      )
-                    )}
+                    <p className="font-medium text-slate-900 dark:text-white">
+                      {dataset.title}
+                    </p>
+                    <p className="mt-1 line-clamp-2 text-sm text-slate-500 dark:text-slate-400">
+                      {dataset.description || 'Sin descripcion disponible.'}
+                    </p>
                   </button>
-                </div>
-                <div className="mt-2 relative">
-                  <FilterInput
-                    value={filters.organization || ''}
-                    onChange={handleFilterChange.bind(null, 'organization')}
-                    placeholder="Filtrar por organización..."
-                  />
-                </div>
-              </th>
-              <th className="px-4 py-2 text-left text-sm font-medium text-gray-900 dark:text-gray-200 border-b dark:border-gray-700 w-[10%]">
-                <div className="flex items-center gap-2">
+                </td>
+                <td className="px-4 py-4 align-top text-sm text-slate-600 dark:text-slate-300">
+                  {dataset.organization.title}
+                </td>
+                <td className="px-4 py-4 align-top text-sm text-slate-600 dark:text-slate-300">
+                  {new Date(dataset.metadata_modified).toLocaleDateString('es-UY')}
+                </td>
+                <td className="px-4 py-4 align-top text-sm text-slate-600 dark:text-slate-300">
+                  {dataset.resources.length}
+                </td>
+                <td className="px-4 py-4 align-top">
                   <button
-                    className="flex items-center gap-1 hover:text-primary whitespace-nowrap"
-                    onClick={() => handleSort('metadata_created')}
+                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-200 dark:hover:border-primary dark:hover:text-primary"
+                    onClick={() => onOpenDataset(dataset.id)}
+                    type="button"
                   >
-                    Fecha
-                    {sortField === 'metadata_created' && (
-                      sortDirection === 'asc' ? (
-                        <ChevronUpIcon className="w-4 h-4" />
-                      ) : (
-                        <ChevronDownIcon className="w-4 h-4" />
-                      )
-                    )}
+                    Ver detalle
+                    <ArrowTopRightOnSquareIcon className="h-4 w-4" />
                   </button>
-                </div>
-              </th>
-              <th className="px-4 py-2 text-left text-sm font-medium text-gray-900 dark:text-gray-200 border-b dark:border-gray-700 w-[10%]">
-                <div className="flex items-center gap-2">
-                  <button
-                    className="flex items-center gap-1 hover:text-primary"
-                    onClick={() => handleSort('num_resources')}
-                  >
-                    Recursos
-                    {sortField === 'num_resources' && (
-                      sortDirection === 'asc' ? (
-                        <ChevronUpIcon className="w-4 h-4" />
-                      ) : (
-                        <ChevronDownIcon className="w-4 h-4" />
-                      )
-                    )}
-                  </button>
-                </div>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredDatasets.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                  {Object.keys(filters).some(k => filters[k]) 
-                    ? 'No se encontraron datasets con los filtros aplicados'
-                    : showOnlyFavorites
-                    ? 'No hay datasets favoritos'
-                    : 'No hay datasets disponibles'}
                 </td>
               </tr>
-            ) : (
-              filteredDatasets.map((dataset) => (
-                <DatasetRow
-                  key={dataset.id}
-                  dataset={dataset}
-                  isSelected={selectedDataset?.id === dataset.id}
-                  isFavorite={isFavorite(dataset.id)}
-                  onSelect={setSelectedDataset}
-                  onToggleFavorite={toggleFavorite}
-                />
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Sliding Sidebar */}
-      <div className={clsx(
-        'fixed inset-y-0 right-0 w-[500px] bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 z-50',
-        selectedDataset ? 'translate-x-0' : 'translate-x-full'
-      )}>
-        {selectedDataset && (
-          <div className="h-full flex flex-col">
-            <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  {selectedDataset.title}
-                </h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {selectedDataset.organization.title}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleFavorite(selectedDataset);
-                  }}
-                  className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
-                >
-                  {isFavorite(selectedDataset.id) ? (
-                    <StarIconSolid className="w-6 h-6 text-primary" />
-                  ) : (
-                    <StarIcon className="w-6 h-6" />
-                  )}
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedDataset(null);
-                  }}
-                  className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
-                >
-                  <XMarkIcon className="w-6 h-6" />
-                </button>
-              </div>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto p-4">
-              <div className="prose prose-sm max-w-none dark:prose-invert">
-                <p className="text-gray-600 dark:text-gray-300">
-                  {selectedDataset.description}
-                </p>
-              </div>
-
-              <div className="mt-6">
-                <ResourceList resources={selectedDataset.resources} />
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Backdrop */}
-      {selectedDataset && (
-        <div 
-          className="fixed inset-0 bg-black/20 dark:bg-black/40 z-40"
-          onClick={() => setSelectedDataset(null)}
-        />
-      )}
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
-} 
+}

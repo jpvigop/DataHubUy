@@ -1,50 +1,64 @@
-import type { Metadata } from 'next'
-import './globals.css'
-import { ThemeToggle } from '@/components/ThemeToggle'
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import Script from 'next/script';
+
+import { ThemeToggle } from '@/components/ThemeToggle';
+
+import './globals.css';
 
 export const metadata: Metadata = {
   title: 'DataHubUy - Explorador de Datos Abiertos',
   description: 'Explorador de datos abiertos de Uruguay',
-}
+};
 
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode
-}) {
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="es" suppressHydrationWarning>
-      <body suppressHydrationWarning className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
-        <div className="min-h-screen flex flex-col justify-between">
-          <header className="w-full border-b bg-white dark:bg-gray-800 transition-colors">
-            <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
+      <body className="min-h-screen bg-slate-50 transition-colors dark:bg-slate-950" suppressHydrationWarning>
+        <Script id="theme-init" strategy="beforeInteractive">
+          {`try {
+            const theme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.documentElement.classList.toggle('dark', theme === 'dark' || (!theme && prefersDark));
+          } catch (error) {
+            document.documentElement.classList.remove('dark');
+          }`}
+        </Script>
+
+        <div className="flex min-h-screen flex-col justify-between">
+          <header className="border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95">
+            <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
+              <Link className="text-xl font-semibold text-slate-900 dark:text-white" href="/">
                 DataHubUy
-              </h1>
+              </Link>
               <ThemeToggle />
             </div>
           </header>
-          <main className="w-full max-w-6xl px-6 py-8 mx-auto">
-            {children}
-          </main>
-          <footer className="w-full border-t bg-white dark:bg-gray-800 dark:border-gray-700 transition-colors">
-            <div className="max-w-6xl mx-auto px-6 py-4">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+
+          <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">{children}</main>
+
+          <footer className="border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+            <div className="mx-auto max-w-6xl px-6 py-4">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 Datos obtenidos del{' '}
-                <a 
-                  href="https://catalogodatos.gub.uy" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
+                <a
                   className="text-primary hover:underline"
+                  href="https://catalogodatos.gub.uy"
+                  rel="noopener noreferrer"
+                  target="_blank"
                 >
-                  Catálogo Nacional de Datos Abiertos
+                  Catalogo Nacional de Datos Abiertos
                 </a>
-                , Ministerio de Economía y Finanzas, 2024.
+                , Ministerio de Economia y Finanzas, 2024.
               </p>
             </div>
           </footer>
         </div>
       </body>
     </html>
-  )
-} 
+  );
+}

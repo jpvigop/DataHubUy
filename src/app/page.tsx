@@ -1,23 +1,54 @@
-'use client';
-
-import { Suspense } from 'react';
 import { HomeContent } from '@/components/HomeContent';
+import { parseCatalogQuery } from '@/lib/catalog-query';
+import { CkanError, getDatasetDetails, searchDatasets } from '@/lib/ckan';
+import type { Dataset } from '@/lib/types';
 
-export default function Home() {
+interface HomePageProps {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof CkanError || error instanceof Error) {
+    return error.message;
+  }
+
+  return 'No se pudieron cargar los datos del catalogo.';
+}
+
+export default async function Home({ searchParams }: HomePageProps) {
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const query = parseCatalogQuery(resolvedSearchParams);
+
+  let datasets: Dataset[] = [];
+  let total = 0;
+  let catalogError: string | null = null;
+  let selectedDataset: Dataset | null = null;
+  let selectedDatasetError: string | null = null;
+
+  try {
+    const searchResult = await searchDatasets(query);
+    datasets = searchResult.datasets;
+    total = searchResult.total;
+  } catch (error) {
+    catalogError = getErrorMessage(error);
+  }
+
+  if (query.dataset) {
+    try {
+      selectedDataset = await getDatasetDetails(query.dataset);
+    } catch (error) {
+      selectedDatasetError = getErrorMessage(error);
+    }
+  }
+
   return (
-    <Suspense fallback={
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Explorador de Datos Abiertos de Uruguay
-          </h1>
-        </div>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
-        </div>
-      </div>
-    }>
-      <HomeContent />
-    </Suspense>
+    <HomeContent
+      catalogError={catalogError}
+      datasets={datasets}
+      query={query}
+      selectedDataset={selectedDataset}
+      selectedDatasetError={selectedDatasetError}
+      total={total}
+    />
   );
-} 
+}

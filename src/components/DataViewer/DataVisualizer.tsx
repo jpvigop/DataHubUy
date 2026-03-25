@@ -1,18 +1,20 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
   BarElement,
+  CategoryScale,
+  Chart as ChartJS,
+  Legend,
+  LinearScale,
+  LineElement,
+  PointElement,
   Title,
   Tooltip,
-  Legend,
 } from 'chart.js';
-import { Line, Bar } from 'react-chartjs-2';
+import { Bar, Line } from 'react-chartjs-2';
+
+import type { DatastoreField, DatastoreRecord } from '@/lib/types';
 
 ChartJS.register(
   CategoryScale,
@@ -25,192 +27,137 @@ ChartJS.register(
   Legend
 );
 
-interface Field {
-  id: string;
-  type: string;
-}
-
 interface DataVisualizerProps {
-  fields: Field[];
-  records: any[];
+  fields: DatastoreField[];
+  records: DatastoreRecord[];
 }
 
 export function DataVisualizer({ fields, records }: DataVisualizerProps) {
-  // Filter out internal fields
-  const visibleFields = useMemo(() => 
-    fields.filter(f => !f.id.startsWith('_')), 
+  const visibleFields = useMemo(
+    () => fields.filter((field) => !field.id.startsWith('_')),
     [fields]
   );
 
-  // Detect numeric fields by checking values
-  const numericFields = useMemo(() => {
-    return visibleFields.filter(field => {
-      // Check multiple records for numeric values
-      return records.some((record, idx) => {
-        if (idx > 10) return false; // Check only first 10 records
-        const value = Number(record[field.id]);
-        return !isNaN(value) && value !== null && value !== undefined;
-      });
-    });
-  }, [visibleFields, records]);
+  const numericFields = useMemo(
+    () =>
+      visibleFields.filter((field) =>
+        records.slice(0, 10).some((record) => {
+          const value = record[field.id];
+          return value !== null && value !== undefined && !Number.isNaN(Number(value));
+        })
+      ),
+    [records, visibleFields]
+  );
 
-  // Initialize with appropriate defaults
-  const [xAxis, setXAxis] = useState<string>(() => {
-    const nonNumericField = visibleFields.find(f => !numericFields.includes(f));
-    return nonNumericField?.id || visibleFields[0]?.id || '';
-  });
-
-  const [yAxis, setYAxis] = useState<string>(() => {
-    const numericField = numericFields.find(f => f.id !== xAxis);
-    return numericField?.id || numericFields[0]?.id || '';
-  });
-
-  const [chartType, setChartType] = useState<'line' | 'bar'>('bar');
+  const [xAxis, setXAxis] = useState(() => visibleFields[0]?.id ?? '');
+  const [yAxis, setYAxis] = useState(() => numericFields[0]?.id ?? '');
+  const [chartType, setChartType] = useState<'bar' | 'line'>('bar');
 
   const chartData = useMemo(() => {
-    if (!xAxis || !yAxis) return null;
+    if (!xAxis || !yAxis) {
+      return null;
+    }
 
-    const validData = records
-      .map(record => ({
+    const data = records
+      .map((record) => ({
         x: record[xAxis],
-        y: Number(record[yAxis])
+        y: Number(record[yAxis]),
       }))
-      .filter(d => d.x != null && !isNaN(d.y))
-      .slice(0, 50); // Limit to 50 points for performance
+      .filter((item) => item.x !== null && item.x !== undefined && !Number.isNaN(item.y))
+      .slice(0, 50);
 
     return {
-      labels: validData.map(d => String(d.x)),
+      labels: data.map((item) => String(item.x)),
       datasets: [
         {
+          backgroundColor: 'rgba(14, 165, 233, 0.35)',
+          borderColor: 'rgb(14, 165, 233)',
+          data: data.map((item) => item.y),
           label: yAxis,
-          data: validData.map(d => d.y),
-          borderColor: 'rgb(75, 192, 192)',
-          backgroundColor: 'rgba(75, 192, 192, 0.5)',
         },
       ],
     };
   }, [records, xAxis, yAxis]);
 
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'top' as const,
-      },
-      title: {
-        display: true,
-        text: `${yAxis} vs ${xAxis}`,
-        padding: {
-          top: 10,
-          bottom: 30
-        },
-        font: {
-          size: 16
-        }
-      },
-    },
-    scales: {
-      x: {
-        ticks: {
-          maxRotation: 45,
-          minRotation: 45,
-          padding: 10,
-          autoSkip: true,
-          maxTicksLimit: 20
-        },
-        grid: {
-          display: true,
-          drawOnChartArea: false
-        },
-        afterFit: (axis: any) => {
-          axis.paddingBottom = 20;
-        }
-      },
-      y: {
-        beginAtZero: true,
-        ticks: {
-          padding: 5
-        }
-      }
-    }
-  };
-
-  if (visibleFields.length < 2 || records.length === 0) {
+  if (visibleFields.length < 2 || numericFields.length === 0) {
     return (
-      <div className="p-4 text-center text-gray-500">
-        No hay suficientes datos para visualizar
+      <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-slate-300 px-4 py-8 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+        No hay suficientes columnas compatibles para generar un grafico.
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="p-4 border-b dark:border-gray-700">
-        <div className="flex flex-wrap gap-4">
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Eje X (Categorías)
-            </label>
-            <select
-              value={xAxis}
-              onChange={(e) => setXAxis(e.target.value)}
-              className="w-full rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2"
-            >
-              {visibleFields.map(field => (
-                <option key={field.id} value={field.id}>
-                  {field.id}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Eje Y (Valores)
-            </label>
-            <select
-              value={yAxis}
-              onChange={(e) => setYAxis(e.target.value)}
-              className="w-full rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2"
-            >
-              {numericFields.map(field => (
-                <option key={field.id} value={field.id}>
-                  {field.id}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Tipo de gráfico
-            </label>
-            <select
-              value={chartType}
-              onChange={(e) => setChartType(e.target.value as 'line' | 'bar')}
-              className="w-full rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2"
-            >
-              <option value="bar">Barras</option>
-              <option value="line">Líneas</option>
-            </select>
-          </div>
-        </div>
+    <div className="flex h-full flex-col gap-4">
+      <div className="grid gap-4 rounded-xl border border-slate-200 p-4 dark:border-slate-800 md:grid-cols-3">
+        <label className="space-y-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+          <span>Eje X</span>
+          <select
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950"
+            onChange={(event) => setXAxis(event.target.value)}
+            value={xAxis}
+          >
+            {visibleFields.map((field) => (
+              <option key={field.id} value={field.id}>
+                {field.id}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="space-y-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+          <span>Eje Y</span>
+          <select
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950"
+            onChange={(event) => setYAxis(event.target.value)}
+            value={yAxis}
+          >
+            {numericFields.map((field) => (
+              <option key={field.id} value={field.id}>
+                {field.id}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="space-y-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+          <span>Tipo de grafico</span>
+          <select
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950"
+            onChange={(event) => setChartType(event.target.value as 'bar' | 'line')}
+            value={chartType}
+          >
+            <option value="bar">Barras</option>
+            <option value="line">Lineas</option>
+          </select>
+        </label>
       </div>
-      
-      <div className="flex-1 min-h-[600px] p-4">
+
+      <div className="min-h-[420px] rounded-xl border border-slate-200 p-4 dark:border-slate-800">
         {chartData ? (
-          <div className="h-[calc(100%-120px)] w-full pb-16">
-            {chartType === 'line' ? (
-              <Line options={options} data={chartData} />
-            ) : (
-              <Bar options={options} data={chartData} />
-            )}
-          </div>
+          chartType === 'line' ? (
+            <Line
+              data={chartData}
+              options={{
+                maintainAspectRatio: false,
+                responsive: true,
+              }}
+            />
+          ) : (
+            <Bar
+              data={chartData}
+              options={{
+                maintainAspectRatio: false,
+                responsive: true,
+              }}
+            />
+          )
         ) : (
-          <div className="h-full flex items-center justify-center text-gray-500">
-            No hay datos válidos para visualizar con los campos seleccionados
+          <div className="flex h-full items-center justify-center text-sm text-slate-500 dark:text-slate-400">
+            No hay datos validos para el grafico actual.
           </div>
         )}
       </div>
     </div>
   );
-} 
+}

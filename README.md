@@ -1,66 +1,86 @@
-# DataHubUy - Explorador de Datos Abiertos
+# DataHubUy
 
-DataHubUy es una aplicación web que permite explorar y visualizar datos del Catálogo Nacional de Datos Abiertos de Uruguay.
+DataHubUy is a Next.js application for browsing Uruguay's national open data catalog and previewing datastore-backed resources directly in the browser.
 
-## Características
+Production URL: [https://datahubuy-nu.vercel.app/](https://datahubuy-nu.vercel.app/)
 
-- Exploración de datasets disponibles en el catálogo
-- Visualización de datos en formato tabular
-- Generación de gráficos a partir de los datos
-- Filtrado y ordenamiento de datos
-- Modo oscuro/claro
-- Marcado de datasets favoritos
+The old `https://urudata-nu.vercel.app/` domain is no longer the active production URL.
 
-## Tecnologías
+## Stack
 
-- Next.js 14
+- Next.js 14 App Router
 - React 18
 - TypeScript
 - Tailwind CSS
 - Chart.js
-- Axios
+- Vercel Hobby
 
-## Desarrollo
+## Runtime Baseline
 
-### Requisitos previos
+- Node.js `22.x`
+- npm `10.9.2`
 
-- Node.js 18 o superior
-- npm o yarn
-
-### Instalación
+You can load the project version with:
 
 ```bash
-# Clonar el repositorio
-git clone https://github.com/tu-usuario/datahubuy.git
-cd datahubuy
-
-# Instalar dependencias
-npm install
-# o
-yarn install
-
-# Iniciar servidor de desarrollo
-npm run dev
-# o
-yarn dev
+nvm use
 ```
 
-La aplicación estará disponible en [http://localhost:3000](http://localhost:3000).
+## Local Development
 
-## API
+```bash
+git clone https://github.com/jpvigop/DataHubUy.git
+cd DataHubUy
+npm ci
+npm run dev
+```
 
-La aplicación utiliza la API del Catálogo Nacional de Datos Abiertos:
-- API principal: https://catalogodatos.gub.uy/api/3
-- Endpoints principales:
-  - datastore_create
-  - datastore_upsert
-  - datastore_search
-  - datastore_search_sql
+The app runs at [http://localhost:3000](http://localhost:3000).
 
-## Licencia
+## Available Scripts
 
-Este proyecto está bajo la Licencia MIT.
+```bash
+npm run dev
+npm run build
+npm run start
+npm run lint
+npm run typecheck
+npm run test
+npm run test:e2e
+```
 
-## Créditos
+## Architecture Notes
 
-Datos obtenidos del [Catálogo Nacional de Datos Abiertos](https://catalogodatos.gub.uy), Ministerio de Economía y Finanzas, 2024. 
+- The catalog page is server-rendered and fetches CKAN data on the server with Next.js revalidation.
+- `/api/datastore` is the browser-facing preview proxy for datastore records.
+- `/api/datasets` is kept as a compatibility endpoint, but the application no longer relies on it for the main page.
+- The app currently does not require custom runtime environment variables.
+
+## Deployment Notes
+
+- Primary host: Vercel Hobby
+- Main branch: `master`
+- Build command: `npm run build`
+- Start command: `npm run start`
+
+If the Vercel project ever needs to be recreated, point it at this repository root with the default Next.js settings.
+
+## Data Source
+
+Data comes from Uruguay's CKAN catalog:
+
+- Base API: [https://catalogodatos.gub.uy/api/3/action](https://catalogodatos.gub.uy/api/3/action)
+
+## Quality Gates
+
+GitHub Actions runs:
+
+- `npm ci`
+- `npm run lint`
+- `npm run typecheck`
+- `npm run test`
+- `npm run build`
+
+## License
+
+MIT. See [LICENSE](./LICENSE).

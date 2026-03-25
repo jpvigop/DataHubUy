@@ -9,6 +9,8 @@
 # next.js
 /.next/
 /out/
+/playwright-report/
+/test-results/
 
 # production
 /build
@@ -21,6 +23,10 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# local analysis artifacts
+find-large-datasets.js
+large-datasets.csv
 
 # local env files
 .env*.local

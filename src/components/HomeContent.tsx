@@ -1,114 +1,228 @@
 'use client';
 
-import { api } from '@/lib/api'
-import { Pagination } from '@/components/Pagination'
-import { DatasetTable } from '@/components/DatasetTable'
-import { useCallback, useState, useEffect } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useCallback, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 
-const ITEMS_PER_PAGE = 20
+import { DataViewer } from '@/components/DataViewer';
+import { DatasetDrawer } from '@/components/DatasetDrawer';
+import { DatasetTable } from '@/components/DatasetTable';
+import { Pagination } from '@/components/Pagination';
+import { SavedDatasetsPanel } from '@/components/SavedDatasetsPanel';
+import { SearchInput } from '@/components/SearchInput';
+import {
+  createCatalogHref,
+  ITEMS_PER_PAGE,
+  mergeCatalogQuery,
+  type CatalogQueryState,
+  type CatalogSortField,
+} from '@/lib/catalog-query';
+import { useSavedDatasets } from '@/lib/hooks/useSavedDatasets';
+import type { Dataset } from '@/lib/types';
 
-export function HomeContent() {
-  const searchParams = useSearchParams()
-  const [sortField, setSortField] = useState<string>('metadata_modified')
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
-  const [datasets, setDatasets] = useState<any[]>([])
-  const [total, setTotal] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+interface HomeContentProps {
+  catalogError: string | null;
+  datasets: Dataset[];
+  query: CatalogQueryState;
+  selectedDataset: Dataset | null;
+  selectedDatasetError: string | null;
+  total: number;
+}
 
-  const currentPage = Number(searchParams.get('page')) || 1
+function getDefaultDirection(field: CatalogSortField) {
+  return field === 'title' ? 'asc' : 'desc';
+}
 
-  const fetchDatasets = useCallback(async () => {
-    try {
-      console.log('Fetching datasets with params:', {
-        currentPage,
-        sortField,
-        sortDirection
-      })
-      setLoading(true)
-      setError(null)
+export function HomeContent({
+  catalogError,
+  datasets,
+  query,
+  selectedDataset,
+  selectedDatasetError,
+  total,
+}: HomeContentProps) {
+  const router = useRouter();
+  const { isSaved, removeSaved, savedDatasets, toggleSaved } = useSavedDatasets();
 
-      const result = await api.searchDatasets('', {
-        limit: ITEMS_PER_PAGE,
-        offset: (currentPage - 1) * ITEMS_PER_PAGE,
-        sort: `${sortField} ${sortDirection}`
-      })
+  const activeResource = useMemo(
+    () =>
+      selectedDataset?.resources.find((resource) => resource.id === query.resource) ??
+      null,
+    [query.resource, selectedDataset]
+  );
 
-      console.log('API Response:', {
-        total: result.total,
-        datasetCount: result.datasets.length,
-        firstDataset: result.datasets[0]
-      })
+  const navigate = useCallback(
+    (
+      patch: Partial<CatalogQueryState>,
+      options?: Parameters<typeof mergeCatalogQuery>[2]
+    ) => {
+      router.push(createCatalogHref(mergeCatalogQuery(query, patch, options)));
+    },
+    [query, router]
+  );
 
-      setDatasets(result.datasets)
-      setTotal(result.total)
-    } catch (error: any) {
-      console.error('Error fetching datasets:', error)
-      setError(error.message || 'Error al cargar los datos')
-      setDatasets([])
-      setTotal(0)
-    } finally {
-      setLoading(false)
-    }
-  }, [currentPage, sortField, sortDirection])
+  const handleSearch = useCallback(
+    (value: string) => {
+      navigate(
+        {
+          q: value || undefined,
+        },
+        {
+          clearDataset: true,
+          resetPage: true,
+        }
+      );
+    },
+    [navigate]
+  );
 
-  useEffect(() => {
-    fetchDatasets()
-  }, [fetchDatasets])
+  const handleSort = useCallback(
+    (field: CatalogSortField) => {
+      navigate(
+        {
+          direction:
+            query.sort === field
+              ? query.direction === 'asc'
+                ? 'desc'
+                : 'asc'
+              : getDefaultDirection(field),
+          sort: field,
+        },
+        {
+          clearDataset: true,
+          resetPage: true,
+        }
+      );
+    },
+    [navigate, query.direction, query.sort]
+  );
 
-  const handleSort = (field: string) => {
-    setSortDirection(prev => {
-      if (sortField === field) {
-        return prev === 'asc' ? 'desc' : 'asc'
+  const handleOpenDataset = useCallback(
+    (datasetId: string) => {
+      navigate(
+        {
+          dataset: datasetId,
+        },
+        {
+          clearResource: true,
+        }
+      );
+    },
+    [navigate]
+  );
+
+  const handleCloseDataset = useCallback(() => {
+    navigate(
+      {},
+      {
+        clearDataset: true,
       }
-      return 'desc'
-    })
-    setSortField(field)
-  }
+    );
+  }, [navigate]);
+
+  const handleOpenResource = useCallback(
+    (resourceId: string) => {
+      if (!selectedDataset) {
+        return;
+      }
+
+      navigate({
+        dataset: selectedDataset.id,
+        resource: resourceId,
+      });
+    },
+    [navigate, selectedDataset]
+  );
+
+  const handleCloseResource = useCallback(() => {
+    navigate(
+      {},
+      {
+        clearResource: true,
+      }
+    );
+  }, [navigate]);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          Explorador de Datos Abiertos de Uruguay
-        </h1>
-      </div>
+      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+            Explorador de Datos Abiertos de Uruguay
+          </h1>
+          <p className="max-w-3xl text-sm text-slate-600 dark:text-slate-300">
+            Busca datasets del catalogo nacional, abre sus recursos y previsualiza
+            tablas directamente desde el navegador.
+          </p>
+        </div>
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          {error}
+        <SearchInput initialQuery={query.q ?? ''} onSearch={handleSearch} />
+      </section>
+
+      {catalogError && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200">
+          {catalogError}
         </div>
       )}
 
-      {loading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+      {selectedDatasetError && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
+          {selectedDatasetError}
         </div>
-      ) : datasets.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
-          No se encontraron datasets
+      )}
+
+      <SavedDatasetsPanel
+        datasets={savedDatasets}
+        onOpenDataset={handleOpenDataset}
+        onRemoveDataset={removeSaved}
+      />
+
+      {!catalogError && (
+        <div className="flex items-center justify-between gap-3 text-sm text-slate-500 dark:text-slate-400">
+          <p>{total.toLocaleString('es-UY')} datasets encontrados</p>
+          <p>{ITEMS_PER_PAGE} por pagina</p>
+        </div>
+      )}
+
+      {!catalogError && datasets.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-slate-300 px-6 py-12 text-center text-slate-500 dark:border-slate-700 dark:text-slate-400">
+          No se encontraron datasets para los filtros actuales.
         </div>
       ) : (
-        <>
-          <div className="text-sm text-gray-500">
-            {total} datasets encontrados
-          </div>
+        !catalogError && (
+          <>
+            <DatasetTable
+              datasets={datasets}
+              onOpenDataset={handleOpenDataset}
+              onSort={handleSort}
+              onToggleSaved={toggleSaved}
+              query={query}
+              savedDatasetIds={new Set(savedDatasets.map((dataset) => dataset.id))}
+            />
 
-          <DatasetTable 
-            datasets={datasets}
-            onSortAction={handleSort}
-            sortField={sortField}
-            sortDirection={sortDirection}
-          />
+            <Pagination
+              currentPage={query.page}
+              itemsPerPage={ITEMS_PER_PAGE}
+              query={query}
+              totalItems={total}
+            />
+          </>
+        )
+      )}
 
-          <Pagination 
-            currentPage={currentPage}
-            totalItems={total}
-            itemsPerPage={ITEMS_PER_PAGE}
-          />
-        </>
+      {selectedDataset && (
+        <DatasetDrawer
+          activeResourceId={query.resource}
+          dataset={selectedDataset}
+          isSaved={isSaved(selectedDataset.id)}
+          onClose={handleCloseDataset}
+          onOpenResource={handleOpenResource}
+          onToggleSaved={toggleSaved}
+        />
+      )}
+
+      {activeResource && (
+        <DataViewer resource={activeResource} onClose={handleCloseResource} />
       )}
     </div>
   );
-} 
+}
